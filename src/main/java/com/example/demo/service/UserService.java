@@ -6,6 +6,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.example.demo.JwtUtil;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
 
 @Service      //  Tells Spring: "This is a business logic class"
 public class UserService {
@@ -32,7 +36,7 @@ public class UserService {
         return "User registered successfully!";
     }
 
-      // ✅ Login — now returns JWT token
+    // ✅ Login — now returns JWT token
     public String loginUser(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found!"));
@@ -58,4 +62,39 @@ public class UserService {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found!"));
     }
+
+    // ✅ Request Reset Code — NEW
+    public Map<String, String> requestReset(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("No account found!"));
+
+        String code = String.valueOf(new Random().nextInt(900000) + 100000);
+        user.setResetCode(code);
+        user.setResetCodeExpiry(LocalDateTime.now().plusMinutes(15));
+        userRepository.save(user);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("resetCode", code);
+        response.put("message", "Reset code generated!");
+        return response;
+    }
+
+    // ✅ Confirm Reset — NEW
+    public String confirmReset(String email, String resetCode, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found!"));
+
+        if (!resetCode.equals(user.getResetCode()))
+            throw new RuntimeException("Invalid reset code!");
+
+        if (user.getResetCodeExpiry().isBefore(LocalDateTime.now()))
+            throw new RuntimeException("Reset code expired!");
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetCode(null);
+        user.setResetCodeExpiry(null);
+        userRepository.save(user);
+        return "Password changed successfully!";
+    }
+
 }

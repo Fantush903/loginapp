@@ -66,6 +66,7 @@ public class AuthController {
 
     }
 
+    // ✅ PROFILE
     // ✅ TEST Endpoint — just to check app is running
     // ✅ PROTECTED endpoint — only works with valid token
     // GET http://localhost:8080/auth/hello
@@ -89,6 +90,39 @@ public class AuthController {
 
         } catch (Exception e) {
             return ResponseEntity.status(401).body("Unauthorized!");
+        }
+    }
+
+    // ✅ RESET — Request Code
+    @PostMapping("/reset")
+    public ResponseEntity<?> requestReset(@RequestBody Map<String, String> request) {
+        try {
+            String email = request.get("email");
+            Map<String, String> response = userService.requestReset(email);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    // ✅ RESET — Confirm New Password
+    @PutMapping("/reset")
+    public ResponseEntity<?> confirmReset(@RequestBody Map<String, String> request) {
+        try {
+            String result = userService.confirmReset(
+                    request.get("email"),
+                    request.get("resetCode"),
+                    request.get("newPassword")
+            );
+            Map<String, String> response = new HashMap<>();
+            response.put("message", result);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
         }
     }
 }

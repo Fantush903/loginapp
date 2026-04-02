@@ -6,6 +6,7 @@
     import jakarta.validation.constraints.Email;
     import jakarta.validation.constraints.NotBlank;
     import lombok.*;
+    import java.time.LocalDateTime;
 
     @Getter
     @Setter
@@ -36,6 +37,16 @@
         @Column(nullable = false)
         @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)    //✅ hides password from all API responses
         private String password;
+
+        @Column
+        private String resetCode;
+        @Column
+        private LocalDateTime resetCodeExpiry;
+
+        @Column
+        private LocalDateTime createdAt;
+        @Column
+        private LocalDateTime updatedAt;
 
         @Column(nullable = false, columnDefinition = "VARCHAR(50) DEFAULT 'USER' ")
         private String role = "USER";
