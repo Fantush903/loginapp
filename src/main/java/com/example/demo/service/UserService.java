@@ -10,8 +10,6 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 
 @Service      //  Tells Spring: "This is a business logic class"
 public class UserService {
@@ -23,9 +21,6 @@ public class UserService {
 
     @Autowired
     private JwtUtil jwtUtil;
-
-    @Autowired
-    private JavaMailSender mailSender; // ✅ Email sender
 
     // ✅ Register — password encrypted before saving
     public String registerUser(User user) {
@@ -64,8 +59,7 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found!"));
     }
 
-    // ✅ Request Reset Code — NEW
-
+    // ✅ Request Reset Code — shows code on screen
     public Map<String, String> requestReset(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("No account found!"));
@@ -75,27 +69,13 @@ public class UserService {
         user.setResetCodeExpiry(LocalDateTime.now().plusMinutes(15));
         userRepository.save(user);
 
-        // ✅ Send email with code
-
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(email);
-        message.setSubject("MyApp — Password Reset Code");
-        message.setText(
-                "Hello!\n\n" +
-                        "Your password reset code is: " + code + "\n\n" +
-                        "This code expires in 15 minutes.\n\n" +
-                        "If you did not request this, ignore this email.\n\n" +
-                        "— MyApp Team"
-        );
-        mailSender.send(message);
-
         Map<String, String> response = new HashMap<>();
         response.put("resetCode", code);
-        response.put("message", "Reset code generated!");
+        response.put("message", "Reset code ready!");
         return response;
     }
 
-    // ✅ Confirm Reset — NEW
+    // ✅ Confirm Reset
     public String confirmReset(String email, String resetCode, String newPassword) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found!"));
