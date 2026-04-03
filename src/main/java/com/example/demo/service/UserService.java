@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 
 @Service      //  Tells Spring: "This is a business logic class"
 public class UserService {
@@ -22,6 +24,9 @@ public class UserService {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private JavaMailSender mailSender; // ✅ Email sender
+
     // ✅ Register — password encrypted before saving
     public String registerUser(User user) {
         if (userRepository.existsByEmail(user.getEmail())) {
@@ -31,7 +36,6 @@ public class UserService {
         // ✅ Encrypt password before saving to DB
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRole("USER");
-
         userRepository.save(user);
         return "User registered successfully!";
     }
@@ -40,15 +44,12 @@ public class UserService {
     public String loginUser(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found!"));
-
-        // ✅ BCrypt compare — never compare plain text!
-        if (!passwordEncoder.matches(password, user.getPassword())) {
+        if (!passwordEncoder.matches(password, user.getPassword())) {    // ✅ BCrypt compare — never compare plain text!
             throw new RuntimeException("Wrong password!");
         }
 
         // ✅ Generate and return JWT token
         return jwtUtil.generateToken(email);
-
     }
 
     // ✅ Get by ID
@@ -64,6 +65,7 @@ public class UserService {
     }
 
     // ✅ Request Reset Code — NEW
+
     public Map<String, String> requestReset(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("No account found!"));
@@ -72,6 +74,20 @@ public class UserService {
         user.setResetCode(code);
         user.setResetCodeExpiry(LocalDateTime.now().plusMinutes(15));
         userRepository.save(user);
+
+        // ✅ Send email with code
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("MyApp — Password Reset Code");
+        message.setText(
+                "Hello!\n\n" +
+                        "Your password reset code is: " + code + "\n\n" +
+                        "This code expires in 15 minutes.\n\n" +
+                        "If you did not request this, ignore this email.\n\n" +
+                        "— MyApp Team"
+        );
+        mailSender.send(message);
 
         Map<String, String> response = new HashMap<>();
         response.put("resetCode", code);
